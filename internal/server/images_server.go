@@ -17,7 +17,7 @@ func NewImagesServer(images *images.Images) *ImagesServer {
 	return &ImagesServer{images: images}
 }
 
-func (s *ImagesServer) HandleFile(w http.ResponseWriter, r *http.Request) {
+func (s *ImagesServer) HandleImage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	vars := mux.Vars(r)

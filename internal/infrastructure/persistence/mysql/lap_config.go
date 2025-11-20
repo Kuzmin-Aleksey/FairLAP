@@ -4,9 +4,9 @@ import (
 	"FairLAP/internal/domain/entity"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 	"strings"
 )
 

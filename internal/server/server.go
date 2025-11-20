@@ -5,6 +5,7 @@ type Server struct {
 	groups    *GroupsServer
 	metrics   *MetricServer
 	lapConfig *LapConfigServer
+	mask      *MaskServer
 	images    *ImagesServer
 }
 
@@ -13,6 +14,7 @@ func NewServer(
 	groups *GroupsServer,
 	metrics *MetricServer,
 	lapConfig *LapConfigServer,
+	mask *MaskServer,
 	images *ImagesServer,
 ) *Server {
 	return &Server{
@@ -20,6 +22,7 @@ func NewServer(
 		groups:    groups,
 		metrics:   metrics,
 		lapConfig: lapConfig,
+		mask:      mask,
 		images:    images,
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"FairLAP/internal/domain/service/detector"
 	"FairLAP/internal/domain/service/groups"
 	"FairLAP/internal/domain/service/lapconfig"
+	"FairLAP/internal/domain/service/mask"
 	"FairLAP/internal/domain/service/metrics"
 	"FairLAP/internal/infrastructure/persistence/images"
 	"FairLAP/internal/infrastructure/persistence/mysql"
@@ -58,8 +59,9 @@ func Run(cfg *config.Config) {
 	groupsService := groups.NewService(groupsRepo, imagesRepo)
 	lapConfigService := lapconfig.NewService(lapConfigRepo, cfg.DefaultLapConfig)
 	metricsService := metrics.NewService(groupsRepo, detectionsRepo, lapConfigService)
+	maskService := mask.NewService(detectionsRepo)
 
-	httpServer := newHttpServer(l, detectorService, groupsService, metricsService, lapConfigService, imagesRepo, cfg.Http)
+	httpServer := newHttpServer(l, detectorService, groupsService, metricsService, lapConfigService, maskService, imagesRepo, cfg.Http)
 
 	go func() {
 		if cfg.Http.SSLCertPath != "" && cfg.Http.SSLKeyPath != "" {
@@ -93,6 +95,7 @@ func newHttpServer(
 	groups *groups.Service,
 	metrics *metrics.Service,
 	lapConfig *lapconfig.Service,
+	mask *mask.Service,
 	images *images.Images,
 	cfg *config.HttpConfig,
 ) *http.Server {
@@ -101,12 +104,14 @@ func newHttpServer(
 	metricsServer := server.NewMetricServer(metrics)
 	imagesServer := server.NewImagesServer(images)
 	lapConfigServer := server.NewLapConfigServer(lapConfig)
+	maskServer := server.NewMaskService(mask)
 
 	s := server.NewServer(
 		analyzerServer,
 		groupsServer,
 		metricsServer,
 		lapConfigServer,
+		maskServer,
 		imagesServer,
 	)
 

@@ -38,7 +38,7 @@ func (s *MetricServer) GetGroupMetric(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metric, err := s.metrics.GetGroupMetric(ctx, groupId)
+	metric, err := s.metrics.GetGroupMetricV2(ctx, groupId)
 	if err != nil {
 		writeAndLogErr(ctx, w, err)
 		return

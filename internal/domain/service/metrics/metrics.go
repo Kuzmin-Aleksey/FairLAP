@@ -120,3 +120,47 @@ func (s *Service) GetGroupMetric(ctx context.Context, groupId int) (*GroupMetric
 
 	return metric, nil
 }
+
+type GroupMetricV2 struct {
+	ImageCount      int                            `json:"image_count"`
+	DetectionsCount int                            `json:"detections_count"`
+	Images          map[uuid.UUID][]ImageDetection `json:"images"`
+}
+
+type ImageDetection struct {
+	Id          int    `json:"id" db:"id"`
+	Class       string `json:"class" db:"class"`
+	DamageLevel int    `json:"damage_level" db:"damage_level"`
+}
+
+func (s *Service) GetGroupMetricV2(ctx context.Context, groupId int) (*GroupMetricV2, error) {
+	const op = "metrics_service.GetGroupMetric"
+
+	config, err := s.lapConfig.GetConfig(ctx, groupId)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	detections, err := s.detections.GetByGroup(ctx, groupId)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	metric := &GroupMetricV2{
+		DetectionsCount: len(detections),
+		Images:          make(map[uuid.UUID][]ImageDetection),
+	}
+
+	for _, detection := range detections {
+
+		metric.Images[detection.ImageUid] = append(metric.Images[detection.ImageUid], ImageDetection{
+			Id:          detection.Id,
+			Class:       detection.Class,
+			DamageLevel: config[detection.Class],
+		})
+	}
+
+	metric.ImageCount = len(metric.Images)
+
+	return metric, nil
+}

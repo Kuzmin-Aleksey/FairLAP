@@ -10,7 +10,8 @@ import (
 )
 
 type Repo interface {
-	Save(ctx context.Context, detections []entity.Detection) error
+	Save(ctx context.Context, detections *entity.Detection) error
+	SaveRects(ctx context.Context, rects []entity.RectDetection) error
 }
 
 type ImageRepo interface {
@@ -39,24 +40,35 @@ func (s *Service) Detect(ctx context.Context, groupId int, img image.Image) erro
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	renderedImg := drawDetected(img, modelsDetections)
-
-	imgUid, err := s.images.Save(groupId, renderedImg)
+	imgUid, err := s.images.Save(groupId, img)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	detections := make([]entity.Detection, len(modelsDetections))
+	rects := make([]entity.RectDetection, len(modelsDetections))
 
 	for i, detection := range modelsDetections {
-		detections[i] = entity.Detection{
+		d := &entity.Detection{
 			GroupId:  groupId,
 			ImageUid: imgUid,
 			Class:    detection.ClassName,
 		}
+		if err := s.repo.Save(ctx, d); err != nil {
+			return fmt.Errorf("%s: %w", op, err)
+		}
+		rects[i] = entity.RectDetection{
+			DetectionId: d.Id,
+			Width:       img.Bounds().Dx(),
+			Height:      img.Bounds().Dy(),
+			X0:          detection.BBox.Min.X,
+			Y0:          detection.BBox.Min.Y,
+			X1:          detection.BBox.Max.X,
+			Y1:          detection.BBox.Max.Y,
+			Confidence:  detection.Confidence,
+		}
 	}
 
-	if err := s.repo.Save(ctx, detections); err != nil {
+	if err := s.repo.SaveRects(ctx, rects); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 

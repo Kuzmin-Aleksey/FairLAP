@@ -2,3 +2,4 @@
 config/config.yaml
 logs
 *.jpeg
+*.png
