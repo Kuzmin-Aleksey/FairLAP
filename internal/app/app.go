@@ -4,6 +4,7 @@ import (
 	"FairLAP/internal/config"
 	"FairLAP/internal/domain/service/detector"
 	"FairLAP/internal/domain/service/groups"
+	"FairLAP/internal/domain/service/lapconfig"
 	"FairLAP/internal/domain/service/metrics"
 	"FairLAP/internal/infrastructure/persistence/images"
 	"FairLAP/internal/infrastructure/persistence/mysql"
@@ -41,6 +42,7 @@ func Run(cfg *config.Config) {
 
 	detectionsRepo := mysql.NewDetectionsRepo(db)
 	groupsRepo := mysql.NewGroupsRepo(db)
+	lapConfigRepo := mysql.NewLapConfigRepo(db)
 
 	imagesRepo := images.New(cfg.ImagesPath)
 
@@ -52,11 +54,12 @@ func Run(cfg *config.Config) {
 	yoloModel := yolo_model.NewModel(cfg.YoloModel.Model, yoloConfig)
 	defer yoloModel.Close()
 
-	detectorService := detector.NewService(yoloModel, cfg.Detector, detectionsRepo, imagesRepo)
+	detectorService := detector.NewService(yoloModel, detectionsRepo, imagesRepo)
 	groupsService := groups.NewService(groupsRepo, imagesRepo)
-	metricsService := metrics.NewService(groupsRepo, detectionsRepo)
+	lapConfigService := lapconfig.NewService(lapConfigRepo, cfg.DefaultLapConfig)
+	metricsService := metrics.NewService(groupsRepo, detectionsRepo, lapConfigService)
 
-	httpServer := newHttpServer(l, detectorService, groupsService, metricsService, imagesRepo, cfg.Http)
+	httpServer := newHttpServer(l, detectorService, groupsService, metricsService, lapConfigService, imagesRepo, cfg.Http)
 
 	go func() {
 		if cfg.Http.SSLCertPath != "" && cfg.Http.SSLKeyPath != "" {
@@ -89,6 +92,7 @@ func newHttpServer(
 	detector *detector.Service,
 	groups *groups.Service,
 	metrics *metrics.Service,
+	lapConfig *lapconfig.Service,
 	images *images.Images,
 	cfg *config.HttpConfig,
 ) *http.Server {
@@ -96,11 +100,13 @@ func newHttpServer(
 	groupsServer := server.NewGroupsServer(groups)
 	metricsServer := server.NewMetricServer(metrics)
 	imagesServer := server.NewImagesServer(images)
+	lapConfigServer := server.NewLapConfigServer(lapConfig)
 
 	s := server.NewServer(
 		analyzerServer,
 		groupsServer,
 		metricsServer,
+		lapConfigServer,
 		imagesServer,
 	)
 

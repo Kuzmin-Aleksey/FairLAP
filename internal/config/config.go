@@ -8,12 +8,12 @@ import (
 )
 
 type Config struct {
-	Debug      bool             `json:"debug" yaml:"debug" env:"DEBUG" envDefault:"false"`
-	Http       *HttpConfig      `json:"http" yaml:"http"`
-	MySQL      *MySQLConfig     `json:"mysql" yaml:"mysql"`
-	YoloModel  *YoloModelConfig `json:"yolo_model" yaml:"yolo_model"`
-	Detector   *DetectorConfig  `json:"detector" yaml:"detector"`
-	ImagesPath string           `json:"images_path" yaml:"images_path"`
+	Debug            bool             `json:"debug" yaml:"debug" env:"DEBUG" envDefault:"false"`
+	Http             *HttpConfig      `json:"http" yaml:"http"`
+	MySQL            *MySQLConfig     `json:"mysql" yaml:"mysql"`
+	YoloModel        *YoloModelConfig `json:"yolo_model" yaml:"yolo_model"`
+	ImagesPath       string           `json:"images_path" yaml:"images_path"`
+	DefaultLapConfig map[string]int   `json:"default_lap_config" yaml:"default_lap_config"`
 }
 
 type HttpConfig struct {
@@ -39,10 +39,6 @@ type YoloModelConfig struct {
 	ModelConfig string `json:"model_config" yaml:"model_config"`
 }
 
-type DetectorConfig struct {
-	ProblemClasses []int `json:"problem_classes" yaml:"problem_classes"`
-}
-
 func ReadConfig(path string, dotenv ...string) (*Config, error) {
 	if err := godotenv.Load(dotenv...); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -51,6 +47,8 @@ func ReadConfig(path string, dotenv ...string) (*Config, error) {
 	}
 
 	cfg := new(Config)
+	cfg.DefaultLapConfig = make(map[string]int)
+
 	if err := cleanenv.ReadConfig(path, cfg); err != nil {
 		return nil, err
 	}

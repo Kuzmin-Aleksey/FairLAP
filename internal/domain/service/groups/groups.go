@@ -11,6 +11,7 @@ import (
 
 type Repo interface {
 	Save(ctx context.Context, group *entity.Group) error
+	GetByLap(ctx context.Context, lapId int) ([]entity.Group, error)
 	Delete(ctx context.Context, id int) error
 }
 
@@ -43,6 +44,15 @@ func (s *Service) CreateGroup(ctx context.Context, lapId int) (int, error) {
 	}
 
 	return group.Id, nil
+}
+
+func (s *Service) GetByLap(ctx context.Context, lapId int) ([]entity.Group, error) {
+	const op = "groups_service.GetByLap"
+	groups, err := s.repo.GetByLap(ctx, lapId)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	return groups, nil
 }
 
 func (s *Service) DeleteGroup(ctx context.Context, id int) error {

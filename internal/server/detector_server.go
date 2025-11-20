@@ -62,6 +62,6 @@ func decodeImg(r io.Reader, mime string) (image.Image, error) {
 	case "image/tiff":
 		return tiff.Decode(r)
 	default:
-		return nil, fmt.Errorf("unknown image type: %s", mime)
+		return nil, fmt.Errorf("unknown image type: %service", mime)
 	}
 }

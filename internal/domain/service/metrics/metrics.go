@@ -6,37 +6,42 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-	"log"
 	"time"
 )
 
 type DetectionsRepo interface {
 	GetByGroup(ctx context.Context, group int) ([]entity.Detection, error)
-	IsExistProblem(ctx context.Context, lapId int) (bool, error)
 }
 
 type GroupsRepo interface {
 	GetLaps(ctx context.Context) ([]aggregate.LapLastDetect, error)
 }
 
+type ConfigService interface {
+	GetConfig(ctx context.Context, lapId int) (map[string]int, error)
+}
+
 type Service struct {
 	groups     GroupsRepo
 	detections DetectionsRepo
+	lapConfig  ConfigService
 }
 
-func NewService(groups GroupsRepo, detections DetectionsRepo) *Service {
+func NewService(groups GroupsRepo, detections DetectionsRepo, lapConfig ConfigService) *Service {
 	return &Service{
 		groups:     groups,
 		detections: detections,
+		lapConfig:  lapConfig,
 	}
 }
 
 type LapItem struct {
 	HaveProblems bool      `json:"have_problems"`
+	LastGroup    int       `json:"last_group"`
 	LastDetect   time.Time `json:"last_detect"`
 }
 
-func (s *Service) GetLaps(ctx context.Context) (map[int]*LapItem, error) {
+func (s *Service) GetLaps(ctx context.Context) (map[int]LapItem, error) {
 	const op = "metrics_service.GetLaps"
 
 	laps, err := s.groups.GetLaps(ctx)
@@ -44,33 +49,46 @@ func (s *Service) GetLaps(ctx context.Context) (map[int]*LapItem, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	lapMap := make(map[int]*LapItem)
+	lapMap := make(map[int]LapItem)
 
 	for _, lap := range laps {
-		lapMap[lap.LapId] = &LapItem{
+		lapItem := LapItem{
+			LastGroup:  lap.LastGroup,
 			LastDetect: lap.LastDetect,
 		}
-	}
 
-	for lap := range lapMap {
-		isHaveProblems, err := s.detections.IsExistProblem(ctx, lap)
+		config, err := s.lapConfig.GetConfig(ctx, lap.LapId)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
-		lapMap[lap].HaveProblems = isHaveProblems
+
+		detections, err := s.detections.GetByGroup(ctx, lap.LastGroup)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+
+		maxSum := config["sum"]
+		deletionsLevelSum := 0
+
+		for _, detection := range detections {
+			deletionsLevelSum += config[detection.Class]
+			if deletionsLevelSum >= maxSum {
+				lapItem.HaveProblems = true
+				break
+			}
+		}
+
+		lapMap[lap.LapId] = lapItem
 	}
 
 	return lapMap, nil
 }
 
 type GroupMetric struct {
-	ImageCount      int `json:"image_count"`
-	DetectionsCount int `json:"detections_count"`
-	ProblemCount    int `json:"problem_count"`
-
-	Classes        []string                      `json:"classes"`
-	ProblemClasses []string                      `json:"problem_classes"`
-	Detections     map[string][]entity.Detection `json:"detections"`
+	ImageCount      int                           `json:"image_count"`
+	DetectionsCount int                           `json:"detections_count"`
+	Classes         []string                      `json:"classes"`
+	Detections      map[string][]entity.Detection `json:"detections"`
 }
 
 func (s *Service) GetGroupMetric(ctx context.Context, groupId int) (*GroupMetric, error) {
@@ -82,39 +100,22 @@ func (s *Service) GetGroupMetric(ctx context.Context, groupId int) (*GroupMetric
 	}
 
 	imagesMap := make(map[uuid.UUID]struct{})
-	classesMap := make(map[string]struct{})
-	problemClassesMap := make(map[string]struct{})
 
 	metric := &GroupMetric{
 		Detections: make(map[string][]entity.Detection),
 	}
 
-	log.Println(len(classesMap))
-
 	for _, detection := range detections {
 		imagesMap[detection.ImageUid] = struct{}{}
-
-		if detection.IsProblem {
-			metric.ProblemCount++
-			problemClassesMap[detection.Class] = struct{}{}
-		} else {
-			classesMap[detection.Class] = struct{}{}
-			metric.DetectionsCount++
-		}
-
 		metric.Detections[detection.Class] = append(metric.Detections[detection.Class], detection)
 	}
 
 	metric.ImageCount = len(imagesMap)
 
-	metric.Classes = make([]string, 0, len(classesMap))
-	metric.ProblemClasses = make([]string, 0, len(problemClassesMap))
+	metric.Classes = make([]string, 0, len(metric.Detections))
 
-	for class := range classesMap {
+	for class := range metric.Detections {
 		metric.Classes = append(metric.Classes, class)
-	}
-	for class := range problemClassesMap {
-		metric.ProblemClasses = append(metric.ProblemClasses, class)
 	}
 
 	return metric, nil
