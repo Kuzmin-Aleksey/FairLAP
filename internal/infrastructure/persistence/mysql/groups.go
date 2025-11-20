@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"FairLAP/internal/domain/aggregate"
 	"FairLAP/internal/domain/entity"
 	"context"
 	"database/sql"
@@ -37,15 +38,15 @@ func (r *GroupsRepo) Save(ctx context.Context, group *entity.Group) error {
 	return nil
 }
 
-func (r *GroupsRepo) GetAll(ctx context.Context) ([]entity.Group, error) {
-	const op = "DetectionsRepo.GetAll"
-	var groups []entity.Group
-	if err := r.db.SelectContext(ctx, &groups, "SELECT * FROM `groups`"); err != nil {
+func (r *GroupsRepo) GetLaps(ctx context.Context) ([]aggregate.LapLastDetect, error) {
+	const op = "DetectionsRepo.GetLaps"
+	var laps []aggregate.LapLastDetect
+	if err := r.db.SelectContext(ctx, &laps, "SELECT lap_id, max(create_at) AS last_detect FROM `groups` GROUP BY lap_id"); err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
 	}
-	return groups, nil
+	return laps, nil
 }
 
 func (r *GroupsRepo) Delete(ctx context.Context, id int) error {

@@ -54,3 +54,14 @@ func (r *DetectionsRepo) GetByGroup(ctx context.Context, group int) ([]entity.De
 
 	return detections, nil
 }
+
+func (r *DetectionsRepo) IsExistProblem(ctx context.Context, lapId int) (bool, error) {
+	const op = "DetectionsRepo.IsExistProblem"
+
+	query := "SELECT EXISTS(SELECT * FROM detections INNER JOIN `groups` ON detections.group_id = `groups`.id WHERE detections.is_problem AND `groups`.lap_id=?)"
+	var exist bool
+	if err := r.db.QueryRowContext(ctx, query, lapId).Scan(&exist); err != nil {
+		return false, fmt.Errorf("%w: %s", err, op)
+	}
+	return exist, nil
+}

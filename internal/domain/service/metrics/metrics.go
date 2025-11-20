@@ -1,19 +1,22 @@
 package metrics
 
 import (
+	"FairLAP/internal/domain/aggregate"
 	"FairLAP/internal/domain/entity"
 	"context"
 	"fmt"
 	"github.com/google/uuid"
 	"log"
+	"time"
 )
 
 type DetectionsRepo interface {
 	GetByGroup(ctx context.Context, group int) ([]entity.Detection, error)
+	IsExistProblem(ctx context.Context, lapId int) (bool, error)
 }
 
 type GroupsRepo interface {
-	GetAll(ctx context.Context) ([]entity.Group, error)
+	GetLaps(ctx context.Context) ([]aggregate.LapLastDetect, error)
 }
 
 type Service struct {
@@ -28,18 +31,33 @@ func NewService(groups GroupsRepo, detections DetectionsRepo) *Service {
 	}
 }
 
-func (s *Service) GetLaps(ctx context.Context) (map[int][]entity.Group, error) {
+type LapItem struct {
+	HaveProblems bool      `json:"have_problems"`
+	LastDetect   time.Time `json:"last_detect"`
+}
+
+func (s *Service) GetLaps(ctx context.Context) (map[int]*LapItem, error) {
 	const op = "metrics_service.GetLaps"
 
-	groups, err := s.groups.GetAll(ctx)
+	laps, err := s.groups.GetLaps(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	lapMap := make(map[int][]entity.Group)
+	lapMap := make(map[int]*LapItem)
 
-	for _, group := range groups {
-		lapMap[group.LapId] = append(lapMap[group.LapId], group)
+	for _, lap := range laps {
+		lapMap[lap.LapId] = &LapItem{
+			LastDetect: lap.LastDetect,
+		}
+	}
+
+	for lap := range lapMap {
+		isHaveProblems, err := s.detections.IsExistProblem(ctx, lap)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+		lapMap[lap].HaveProblems = isHaveProblems
 	}
 
 	return lapMap, nil
