@@ -159,6 +159,10 @@ func (m *Model) processYOLOv8Output(output gocv.Mat, origWidth, origHeight int) 
 		classIDs = append(classIDs, maxClass)
 	}
 
+	if len(boxes) == 0 {
+		return []Detection{}, nil
+	}
+
 	indices := gocv.NMSBoxes(boxes, confidences, m.cfg.ConfThreshold, m.cfg.NMSThreshold)
 
 	var detections []Detection

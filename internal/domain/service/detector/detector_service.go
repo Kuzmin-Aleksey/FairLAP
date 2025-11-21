@@ -45,6 +45,10 @@ func (s *Service) Detect(ctx context.Context, groupId int, img image.Image) erro
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
+	if len(modelsDetections) == 0 {
+		return nil
+	}
+
 	rects := make([]entity.RectDetection, len(modelsDetections))
 
 	for i, detection := range modelsDetections {
