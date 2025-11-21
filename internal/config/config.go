@@ -17,26 +17,26 @@ type Config struct {
 }
 
 type HttpConfig struct {
-	Host             string `json:"host" yaml:"host"`
-	ReadTimeoutSec   int    `json:"read_timeout_sec" yaml:"read_timeout_sec"`
-	HandleTimeoutSec int    `json:"handle_timeout_sec" yaml:"handle_timeout_sec"`
-	WriteTimeoutSec  int    `json:"write_timeout_sec" yaml:"write_timeout_sec"`
-	SSLKeyPath       string `json:"ssl_key_path" yaml:"ssl_key_path"`
-	SSLCertPath      string `json:"ssl_cert_path" yaml:"ssl_cert_path"`
+	Host             string `json:"host" yaml:"host" env:"HTTP_HOST" envDefault:"localhost"`
+	ReadTimeoutSec   int    `json:"read_timeout_sec" yaml:"read_timeout_sec" env:"HTTP_READ_TIMEOUT_SEC" envDefault:"10"`
+	HandleTimeoutSec int    `json:"handle_timeout_sec" yaml:"handle_timeout_sec" env:"HTTP_HANDE_TIMEOUT_SEC" envDefault:"20"`
+	WriteTimeoutSec  int    `json:"write_timeout_sec" yaml:"write_timeout_sec" env:"HTTP_WRITE_TIMEOUT_SEC" envDefault:"10"`
+	SSLKeyPath       string `json:"ssl_key_path" yaml:"ssl_key_path" env:"HTTP_SSL_KEY_PATH"`
+	SSLCertPath      string `json:"ssl_cert_path" yaml:"ssl_cert_path" env:"HTTP_SSL_CERT_PATH"`
 }
 
 type MySQLConfig struct {
-	Host              string `json:"host" yaml:"host"`
-	Port              int    `json:"port" yaml:"port"`
-	User              string `json:"user" yaml:"user"`
-	Password          string `json:"password" yaml:"password"`
-	Schema            string `json:"schema" yaml:"schema"`
-	ConnectTimeoutSec int    `json:"connect_timeout_sec" yaml:"connect_timeout_sec"`
+	Host              string `json:"host" yaml:"host" env:"MYSQL_HOST" envDefault:"localhost"`
+	Port              int    `json:"port" yaml:"port" env:"MYSQL_PORT" envDefault:"3306"`
+	User              string `json:"user" yaml:"user" env:"MYSQL_USER" envDefault:"root"`
+	Password          string `json:"password" yaml:"password" env:"MYSQL_PASSWORD" envDefault:"pass"`
+	Schema            string `json:"schema" yaml:"schema" env:"MYSQL_SCHEMA" envDefault:"app"`
+	ConnectTimeoutSec int    `json:"connect_timeout_sec" yaml:"connect_timeout_sec" env:"MYSQL_CONNECT_TIMEOUT_SEC" envDefault:"10"`
 }
 
 type YoloModelConfig struct {
-	Model       string `json:"model" yaml:"model"`
-	ModelConfig string `json:"model_config" yaml:"model_config"`
+	Model       string `json:"model" yaml:"model" env:"YOLO_MODEL"`
+	ModelConfig string `json:"model_config" yaml:"model_config" env:"YOLO_MODEL_CONFIG"`
 }
 
 func ReadConfig(path string, dotenv ...string) (*Config, error) {
